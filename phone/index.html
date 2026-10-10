@@ -1,0 +1,969 @@
+<title>Rehearsal Room</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400;1,7..72,600&display=swap">
+<style>
+/* Rehearsal Room — phone edition.
+   Same ideas as the laptop app: a white reading plate (the figures are
+   white matplotlib charts), teal accent, red only for recording. The
+   margin rail becomes a strip under the answer, and the pager becomes a
+   thumb bar at the bottom. */
+
+:root {
+  --ground:      #e7eaea;
+  --ground-deep: #dadfdf;
+  --sheet:       #ffffff;
+  --ink:         #222a31;
+  --ink-soft:    #5a666f;
+  --ink-faint:   #8c979e;
+  --rule:        #dde3e4;
+  --rule-soft:   #eaeeef;
+  --accent:      #0f5f69;
+  --accent-tint: #e4efef;
+  --accent-edge: #b9d4d6;
+  --rec:         #a8402c;
+  --known:       #3f6e4c;
+  --unsure:      #96681d;
+  --on-mark:     #ffffff;
+  --shadow:      0 1px 2px rgba(22,40,44,.06), 0 8px 24px -12px rgba(22,40,44,.18);
+  --serif: "Literata", "Sitka Text", Georgia, "Times New Roman", serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:  ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  --read: 18px;
+  --top-h: 52px;
+  --bottom-h: 64px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #121719; --ground-deep: #0d1113; --sheet: #1a2023;
+    --ink: #dfe6e8; --ink-soft: #9aa7ac; --ink-faint: #748288;
+    --rule: #2b3337; --rule-soft: #232b2e;
+    --accent: #5ab8c2; --accent-tint: #15312f; --accent-edge: #2d4f50;
+    --rec: #e07a63; --known: #6aa87b; --unsure: #c79a4a; --on-mark: #0d1113;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #121719; --ground-deep: #0d1113; --sheet: #1a2023;
+  --ink: #dfe6e8; --ink-soft: #9aa7ac; --ink-faint: #748288;
+  --rule: #2b3337; --rule-soft: #232b2e;
+  --accent: #5ab8c2; --accent-tint: #15312f; --accent-edge: #2d4f50;
+  --rec: #e07a63; --known: #6aa87b; --unsure: #c79a4a; --on-mark: #0d1113;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; }
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---- frame ---- */
+.top {
+  position: sticky; top: 0; z-index: 20;
+  height: var(--top-h);
+  display: flex; align-items: center; gap: 6px;
+  padding-inline: 8px;
+  background: var(--ground-deep);
+  border-bottom: 1px solid var(--rule);
+}
+.top-title {
+  flex: 1; min-width: 0;
+  font-family: var(--serif); font-weight: 600; font-size: 16px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-inline: 4px;
+}
+.icon-btn {
+  min-width: 42px; height: 42px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  border: 0; border-radius: 9px; background: none; color: var(--ink-soft);
+  padding-inline: 8px;
+}
+.icon-btn:active { background: var(--ground); }
+.type-btn { font-family: var(--serif); font-weight: 600; line-height: 1; }
+.type-btn .sm { font-size: 10px; } .type-btn .lg { font-size: 16px; }
+
+.wrap { padding-inline: 16px; padding-block: 14px calc(var(--bottom-h) + 24px); }
+.sheet {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding-inline: 18px; padding-block: 22px 24px;
+}
+
+.sync {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--ink-faint);
+  padding-inline: 2px; padding-block: 0 10px;
+}
+.sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+.sync.cloud .dot { background: var(--known); }
+.sync.local .dot { background: var(--unsure); }
+.sync.off { cursor: pointer; }
+.sync.off .dot { background: var(--rec); }
+.sync.off #sync-text { color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- question ---- */
+.crumb { display: flex; gap: 10px; align-items: baseline; font-size: 12px; color: var(--ink-faint); margin-bottom: 14px; }
+.crumb .qnum { font-family: var(--mono); color: var(--accent); font-size: 12px; }
+.crumb .sec { flex: 1; min-width: 0; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crumb .pos { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.question {
+  font-family: var(--serif);
+  font-size: calc(var(--read) * 1.3);
+  line-height: 1.28; font-weight: 600;
+  margin: 0 0 6px; text-wrap: pretty;
+}
+.q-meta { font-size: 12px; color: var(--ink-faint); margin: 0 0 18px; }
+.q-meta .long { color: var(--unsure); }
+
+.reveal {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding-block: 13px;
+  border: 1px solid var(--accent-edge); border-radius: 9px;
+  background: var(--accent-tint); color: var(--accent);
+  font-weight: 600; font-size: 15px;
+}
+.reveal:active { background: var(--accent); color: var(--sheet); }
+
+.answer-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .24s cubic-bezier(.3,.8,.4,1); }
+.answer-wrap.open { grid-template-rows: 1fr; }
+.answer-wrap > div { overflow: hidden; }
+
+/* ---- answer (same rules as the laptop) ---- */
+.answer { font-family: var(--serif); font-size: var(--read); line-height: 1.6; padding-top: 20px; }
+.answer > :first-child { margin-top: 0; }
+.answer p { margin: 0 0 1em; text-wrap: pretty; }
+.answer ul, .answer ol { margin: 0 0 1em; padding-left: 1.3em; }
+.answer li { margin-bottom: .4em; }
+.answer strong { font-weight: 600; }
+.answer a { color: var(--accent); }
+.answer h3 { font-family: var(--serif); font-size: calc(var(--read) * 1.05); font-weight: 600; margin: 1.8em 0 .5em; padding-top: .8em; border-top: 1px solid var(--rule-soft); }
+.answer h4, .answer h5 { font-family: var(--sans); font-size: calc(var(--read) * .8); font-weight: 650; color: var(--ink-soft); margin: 1.8em 0 .6em; }
+.answer p.one-liner {
+  font-size: calc(var(--read) * 1.04); line-height: 1.5;
+  background: var(--accent-tint); border: 1px solid var(--accent-edge); border-radius: 6px;
+  padding-inline: 15px; padding-block: 13px; margin-bottom: 1.3em;
+}
+.answer p.one-liner strong { color: var(--accent); }
+.answer blockquote.followup {
+  margin: 1.6em 0 1em; padding-inline: 14px 0; padding-block: 2px;
+  border-left: 3px solid var(--unsure); color: var(--ink-soft);
+  font-size: calc(var(--read) * .95);
+}
+.answer blockquote.followup strong { color: var(--unsure); }
+.answer blockquote.followup p:last-child { margin-bottom: 0; }
+.answer blockquote:not(.followup) { margin: 1.3em 0; padding-left: 14px; border-left: 3px solid var(--rule); color: var(--ink-soft); }
+.table-wrap { overflow-x: auto; margin: 0 -18px 1.4em; padding-inline: 18px; -webkit-overflow-scrolling: touch; }
+.answer table { border-collapse: collapse; min-width: 100%; font-family: var(--sans); font-size: calc(var(--read) * .78); line-height: 1.4; }
+.answer th, .answer td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--rule-soft); white-space: normal; min-width: 9em; }
+.answer th { font-weight: 650; color: var(--ink-soft); border-bottom-color: var(--rule); }
+.answer tbody tr:last-child td { border-bottom: 0; }
+.answer figure { margin: 1.5em 0; text-align: center; }
+.answer figure img { max-width: 100%; height: auto; background: #fff; border: 1px solid var(--rule); border-radius: 4px; padding: 6px; }
+.answer figcaption { font-family: var(--sans); font-size: 12px; line-height: 1.4; color: var(--ink-faint); margin-top: 8px; text-align: left; }
+:root[data-theme="dark"] .answer figure img { filter: brightness(.94); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .answer figure img { filter: brightness(.94); } }
+.answer math { font-size: 1em; }
+.answer math[display="block"] { display: block; margin: 1.2em 0; overflow-x: auto; overflow-y: hidden; }
+.answer code { font-family: var(--mono); font-size: .85em; background: var(--ground); padding: 1px 5px; border-radius: 3px; }
+.answer pre { background: var(--ground); border: 1px solid var(--rule); border-radius: 5px; padding: 12px; overflow-x: auto; font-size: calc(var(--read) * .76); }
+.answer pre code { background: none; padding: 0; }
+.answer.is-page h1 { font-family: var(--serif); font-size: calc(var(--read) * 1.4); margin: 0 0 .5em; }
+.answer.is-page h2 { font-family: var(--serif); font-size: calc(var(--read) * 1.2); margin: 1.5em 0 .5em; }
+.answer.is-page section { border: 0; }
+
+/* ---- margin strip ---- */
+.margin { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--rule); }
+.mark-row { display: flex; gap: 8px; }
+.mark {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding-block: 10px; border: 1px solid var(--rule); border-radius: 9px;
+  background: var(--sheet); color: var(--ink-soft); font-size: 12px;
+}
+.mark svg { width: 18px; height: 18px; }
+.mark.on[data-mark="known"]   { background: var(--known);  border-color: var(--known);  color: var(--on-mark); }
+.mark.on[data-mark="unsure"]  { background: var(--unsure); border-color: var(--unsure); color: var(--on-mark); }
+.mark.on[data-mark="starred"] { background: var(--accent); border-color: var(--accent); color: var(--on-mark); }
+
+.m-title { font-family: var(--sans); font-size: 12px; font-weight: 650; color: var(--ink-faint); margin: 20px 0 8px; }
+#note {
+  width: 100%; min-height: 110px; resize: vertical;
+  padding-inline: 12px; padding-block: 11px;
+  border: 1px solid var(--rule); border-radius: 9px;
+  background: var(--sheet); color: var(--ink);
+  font-family: var(--serif); font-size: 15px; line-height: 1.5;
+}
+#note::placeholder { color: var(--ink-faint); font-style: italic; }
+#note:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.status { font-size: 12px; color: var(--ink-faint); margin: 6px 2px 0; min-height: 1em; }
+.status.problem { color: var(--rec); }
+
+/* camera */
+.stage { position: relative; aspect-ratio: 4/3; max-width: 100%; background: var(--ground); border: 1px solid var(--rule); border-radius: 9px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.stage video { width: 100%; height: 100%; object-fit: cover; display: none; }
+.stage.live video { display: block; transform: scaleX(-1); }
+.stage.playing video { display: block; }
+.stage.live .empty, .stage.playing .empty { display: none; }
+.empty { padding: 16px; text-align: center; font-size: 12.5px; color: var(--ink-faint); }
+.rec-dot { position: absolute; top: 10px; left: 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--rec); box-shadow: 0 0 0 3px rgba(168,64,44,.25); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.rec-time { position: absolute; top: 8px; right: 10px; font-family: var(--mono); font-size: 12px; color: #fff; background: rgba(0,0,0,.55); padding: 2px 7px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.record {
+  width: 100%; margin-top: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding-block: 12px; border: 1px solid var(--rule); border-radius: 9px;
+  background: var(--sheet); font-weight: 600; font-size: 14px;
+}
+.record .glyph { width: 11px; height: 11px; border-radius: 50%; background: var(--rec); flex: none; }
+.record.recording { background: var(--rec); border-color: var(--rec); color: #fff; }
+.record.recording .glyph { border-radius: 2px; background: #fff; }
+.record:disabled { opacity: .5; }
+.takes { list-style: none; margin: 10px 0 0; padding: 0; }
+.take { display: flex; align-items: center; gap: 8px; padding-block: 8px; border-top: 1px solid var(--rule); font-size: 12.5px; }
+.take .name { flex: 1; color: var(--ink-soft); }
+.take .size { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.take button { border: 0; background: none; padding: 6px; color: var(--ink-faint); border-radius: 6px; }
+.take button.del:active { color: var(--rec); }
+.take svg { width: 17px; height: 17px; }
+
+/* ---- bottom bar ---- */
+.bottom {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  height: var(--bottom-h);
+  display: flex; align-items: stretch; gap: 8px;
+  padding-inline: 12px; padding-block: 8px calc(8px + env(safe-area-inset-bottom));
+  background: var(--ground-deep);
+  border-top: 1px solid var(--rule);
+}
+.nav-btn {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  padding-inline: 12px;
+  border: 1px solid var(--rule); border-radius: 10px;
+  background: var(--sheet); text-align: left;
+}
+.nav-btn.next { text-align: right; }
+.nav-btn:disabled { opacity: .4; }
+.nav-btn .role { font-size: 11px; color: var(--ink-faint); }
+.nav-btn .q { font-family: var(--serif); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-mid {
+  flex: none; width: 54px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--accent-edge); border-radius: 10px;
+  background: var(--accent-tint); color: var(--accent);
+}
+
+/* ---- home ---- */
+.lede { font-family: var(--serif); font-size: calc(var(--read) * 1.35); line-height: 1.3; margin: 0 0 8px; text-wrap: balance; }
+.sub { font-size: 14px; color: var(--ink-soft); margin: 0 0 22px; }
+.resume { display: block; width: 100%; text-align: left; padding-inline: 16px; padding-block: 14px; margin-bottom: 24px; border: 1px solid var(--accent-edge); border-radius: 9px; background: var(--accent-tint); }
+.resume .role { font-size: 12px; color: var(--accent); margin-bottom: 3px; }
+.resume .q { font-family: var(--serif); font-size: 15px; line-height: 1.35; }
+.guide-row { display: block; width: 100%; text-align: left; padding-inline: 2px; padding-block: 16px; border: 0; border-top: 1px solid var(--rule); background: none; }
+.guide-row:last-child { border-bottom: 1px solid var(--rule); }
+.guide-row .t { font-family: var(--serif); font-size: calc(var(--read) * 1.05); font-weight: 600; margin-bottom: 2px; }
+.guide-row .b { font-size: 13px; color: var(--ink-soft); margin-bottom: 9px; }
+.guide-row .s { font-size: 12px; color: var(--ink-faint); }
+.strip { display: flex; gap: 2px; height: 5px; margin: 8px 0 7px; }
+.strip span { flex: 1; background: var(--ground-deep); border-radius: 1px; }
+.strip span.done { background: var(--known); }
+.strip span.shaky { background: var(--unsure); }
+
+/* ---- panels (contents, search) ---- */
+.panel {
+  position: fixed; inset: 0; z-index: 30;
+  background: var(--ground);
+  display: flex; flex-direction: column;
+}
+.panel-top { height: var(--top-h); display: flex; align-items: center; gap: 6px; padding-inline: 8px; background: var(--ground-deep); border-bottom: 1px solid var(--rule); flex: none; }
+.panel-top .t { flex: 1; font-family: var(--serif); font-weight: 600; font-size: 16px; padding-inline: 4px; }
+.panel-scroll { flex: 1; overflow-y: auto; padding-inline: 0; padding-block: 8px 30px; }
+.guide-head { width: 100%; text-align: left; padding-inline: 16px; padding-block: 13px 10px; border: 0; border-top: 1px solid var(--rule); background: none; font-family: var(--serif); font-size: 16px; font-weight: 600; display: flex; }
+.guide-head:first-child { border-top: 0; }
+.guide-head .n { margin-left: auto; font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--ink-faint); }
+.guide-head[aria-expanded="true"] { color: var(--accent); }
+.part { padding-inline: 16px; padding-block: 10px 3px; font-size: 11.5px; font-style: italic; color: var(--ink-faint); }
+.sec-link { width: 100%; display: flex; gap: 8px; align-items: baseline; text-align: left; padding-inline: 20px 16px; padding-block: 10px; border: 0; background: none; color: var(--ink-soft); font-size: 14px; border-left: 3px solid transparent; }
+.sec-link.current { border-left-color: var(--accent); color: var(--ink); background: var(--ground-deep); }
+.sec-link .nm { flex: 1; }
+.sec-link .dn { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--ink-faint); }
+.sec-link.complete .dn { color: var(--known); }
+.sec-link.is-page .nm::after { content: "reference"; margin-left: 7px; font-size: 10.5px; font-style: italic; color: var(--ink-faint); }
+
+#search { flex: 1; height: 38px; padding-inline: 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; font-size: 15px; }
+#search:focus { outline: none; border-color: var(--accent); }
+.result { width: 100%; text-align: left; padding-inline: 16px; padding-block: 11px; border: 0; border-bottom: 1px solid var(--rule-soft); background: none; }
+.result .rq { font-family: var(--serif); font-size: 14.5px; line-height: 1.35; }
+.result .rw { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+.result mark { background: #ffe9a8; color: inherit; border-radius: 2px; }
+:root[data-theme="dark"] .result mark { background: #5c4a1c; color: #f2e6c8; }
+.hint { padding-inline: 16px; padding-block: 16px; font-size: 13px; color: var(--ink-faint); }
+
+.toast { position: fixed; bottom: calc(var(--bottom-h) + 14px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding-inline: 16px; padding-block: 9px; border-radius: 8px; font-size: 13px; z-index: 40; box-shadow: var(--shadow); max-width: calc(100vw - 32px); }
+</style>
+
+<header class="top">
+  <button class="icon-btn" id="btn-contents" aria-label="Contents">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h9"/></svg>
+  </button>
+  <div class="top-title" id="top-title">Rehearsal Room</div>
+  <button class="icon-btn type-btn" id="type-down" aria-label="Smaller text">A<span class="sm">a</span></button>
+  <button class="icon-btn type-btn" id="type-up" aria-label="Larger text">A<span class="lg">a</span></button>
+  <button class="icon-btn" id="btn-search" aria-label="Search">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+  </button>
+</header>
+
+<div class="wrap">
+  <div class="sync" id="sync"><span class="dot"></span><span id="sync-text">Loading…</span></div>
+  <div class="sheet" id="sheet"><p class="hint">Loading your questions…</p></div>
+</div>
+
+<nav class="bottom" id="bottom" hidden>
+  <button class="nav-btn prev" id="nav-prev"><span class="role">Previous</span><span class="q"></span></button>
+  <button class="nav-mid" id="nav-home" aria-label="Home">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9.5L10 3l7 6.5M5 8.5V17h10V8.5"/></svg>
+  </button>
+  <button class="nav-btn next" id="nav-next"><span class="role">Next</span><span class="q"></span></button>
+</nav>
+
+<div class="panel" id="panel-contents" hidden>
+  <div class="panel-top">
+    <button class="icon-btn" id="close-contents" aria-label="Close"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+    <div class="t">Contents</div>
+  </div>
+  <div class="panel-scroll" id="contents-scroll"></div>
+</div>
+
+<div class="panel" id="panel-search" hidden>
+  <div class="panel-top">
+    <button class="icon-btn" id="close-search" aria-label="Close"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+    <input type="search" id="search" placeholder="Search questions" autocomplete="off">
+  </div>
+  <div class="panel-scroll" id="search-results"><p class="hint">Type at least two letters.</p></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<template id="tpl-margin">
+  <section class="margin">
+    <div class="mark-row">
+      <button class="mark" data-mark="known"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg><span>Got it</span></button>
+      <button class="mark" data-mark="unsure"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 7.5a2.5 2.5 0 114 2c-.9.7-1.5 1.2-1.5 2.5"/><circle cx="10" cy="15.2" r=".9" fill="currentColor" stroke="none"/></svg><span>Shaky</span></button>
+      <button class="mark" data-mark="starred"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/></svg><span>Save</span></button>
+    </div>
+    <h2 class="m-title">Your notes</h2>
+    <textarea id="note" placeholder="What you'd actually say. What you keep forgetting."></textarea>
+    <p class="status" id="note-status"></p>
+    <div id="camera-block" hidden>
+      <h2 class="m-title">Say it out loud</h2>
+      <div class="stage" id="stage">
+        <video id="preview" playsinline muted></video>
+        <div class="empty" id="stage-empty">Record yourself answering, then watch it back. Up to 2 minutes a take.</div>
+        <div class="rec-dot" id="rec-dot" hidden></div>
+        <div class="rec-time" id="rec-time" hidden>0:00</div>
+      </div>
+      <button class="record" id="record"><span class="glyph"></span><span id="record-label">Start recording</span></button>
+      <p class="status" id="camera-note"></p>
+      <ul class="takes" id="takes"></ul>
+    </div>
+  </section>
+</template>
+
+<script>
+(function () {
+'use strict';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+const App = {
+  index: null, content: {}, order: [], position: new Map(), sectionOf: new Map(),
+  state: { marks: {}, last: null }, takes: {},
+  current: null, revealed: false,
+};
+
+/* ---------------- storage: account db if we have it, else this phone ---- */
+const Store = { mode: 'local', db: null, uid: null, assets: null, busy: false, again: false };
+
+function toast(t) {
+  const el = $('#toast'); el.textContent = t; el.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { el.hidden = true; }, 2200);
+}
+function setSync(mode, text) {
+  const el = $('#sync'); el.className = 'sync ' + mode; $('#sync-text').textContent = text;
+}
+function lsGet(k, fallback) { try { const v = localStorage.getItem(k); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+function progressRef() { return Store.db.doc('data/users/' + Store.uid + '/progress'); }
+function takesRef()    { return Store.db.doc('data/users/' + Store.uid + '/takes'); }
+function noteRef(id)   { return Store.db.collection('data/users/' + Store.uid).doc('note__' + id); }
+
+/* Three places this page can keep your work, tried in order:
+     cloud  - the claude.ai account store (when opened as the published page)
+     server - the local server.py on this device (Termux on the phone, or the laptop)
+     local  - this browser only, as a last resort                                 */
+async function connectStore() {
+  if (!window.claude || typeof window.claude.use !== 'function') return connectServer();
+  try {
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    const uid = user ? await user.id() : null;
+    if (!db || !uid) return finishLocal();
+    Store.db = db; Store.uid = uid; Store.mode = 'cloud';
+
+    const [prog, takes] = await Promise.all([progressRef().get(), takesRef().get()]);
+    if (prog.exists) {
+      const d = prog.data();
+      App.state = { marks: d.marks || {}, last: d.last || null };
+    } else {
+      // First time on this account: carry over anything saved on this phone.
+      App.state = lsGet('rr-state', { marks: {}, last: null });
+      if (Object.keys(App.state.marks).length) await progressRef().set({ ...App.state, updatedAt: Date.now() });
+    }
+    App.takes = takes.exists ? (takes.data().byQuestion || {}) : {};
+    Store.assets = await window.claude.use('assets');
+    setSync('cloud', 'Saved to your account');
+  } catch (e) {
+    return finishLocal();
+  }
+  afterStore();
+}
+async function connectServer() {
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    if (!r.ok) throw new Error('no server');
+    const st = await r.json();
+    Store.mode = 'server';
+    App.state = { marks: st.marks || {}, last: st.last || null };
+    const recs = await (await fetch('/api/recordings', { cache: 'no-store' })).json();
+    App.takes = {};
+    (recs.recordings || []).forEach(x => {
+      (App.takes[x.question] = App.takes[x.question] || []).push({ name: x.name, at: x.modified * 1000, bytes: x.bytes });
+    });
+    Camera.limit = 600;   // files on this device, not a 20 MB upload cap
+    setSync('cloud', 'Saved in the RehearsalRoom folder on this device');
+    stopWatching();
+    await pushPending();
+  } catch (e) {
+    return finishLocal();
+  }
+  afterStore();
+}
+function finishLocal() {
+  Store.mode = 'local';
+  App.state = lsGet('rr-state', { marks: {}, last: null });
+  if (window.claude) {
+    setSync('local', 'Saved on this phone only');
+  } else {
+    // Phone edition without its server (Termux closed). Say so, offer a way
+    // to start it, and keep checking so the page recovers without a reload.
+    setSync('local off', 'Server is off. Open the Termux app to start it.');
+    watchForServer();
+  }
+  afterStore();
+}
+/* While the server is away, marks and notes go to this browser and are
+   pushed into the RehearsalRoom folder as soon as it answers again. */
+function watchForServer() {
+  if (Store.watch) return;
+  Store.watch = setInterval(async () => {
+    try { const r = await fetch('/api/state', { cache: 'no-store' }); if (!r.ok) return; } catch { return; }
+    stopWatching(); connectServer();
+  }, 4000);
+}
+function stopWatching() { if (Store.watch) { clearInterval(Store.watch); Store.watch = null; } }
+function openTermux() {
+  // A browser cannot launch Termux itself (Android package visibility), so
+  // say what to do. The page reconnects on its own once the server is up.
+  if (Store.mode !== 'local' || window.claude) return;
+  toast('Open the Termux app from your home screen. The server starts on its own and this page reconnects.');
+}
+async function pushPending() {
+  if (lsGet('rr-pending-state', false)) {
+    const local = lsGet('rr-state', { marks: {}, last: null });
+    App.state = { marks: { ...App.state.marks, ...local.marks }, last: local.last || App.state.last };
+    lsSet('rr-pending-state', false);
+    saveState();
+  }
+  const left = [];
+  for (const id of lsGet('rr-pending-notes', [])) {
+    const text = lsGet('rr-note-' + id, '');
+    if (!text.trim()) continue;
+    try { const r = await fetch('/api/notes/' + id, { method: 'PUT', body: text }); if (!r.ok) left.push(id); }
+    catch { left.push(id); }
+  }
+  lsSet('rr-pending-notes', left);
+}
+function afterStore() {
+  if (App.current) show(App.current, { keepScroll: true }); else showHome();
+}
+
+/* one write at a time per doc; a burst collapses into one write per pause */
+const Save = { stateTimer: null, stateDirty: false, note: null, noteTimer: null, token: 0 };
+
+async function flushState() {
+  clearTimeout(Save.stateTimer);
+  if (!Save.stateDirty) return;
+  Save.stateDirty = false;
+  lsSet('rr-state', App.state);
+  if (Store.mode === 'local') { if (!window.claude) lsSet('rr-pending-state', true); return; }
+  if (Store.busy) { Store.again = true; return; }
+  Store.busy = true;
+  try {
+    if (Store.mode === 'server') {
+      await fetch('/api/state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(App.state), keepalive: true });
+    } else {
+      await progressRef().set({ ...App.state, updatedAt: Date.now() });
+    }
+  }
+  catch (e) { toast('Could not save your progress'); }
+  finally {
+    Store.busy = false;
+    if (Store.again) { Store.again = false; Save.stateDirty = true; flushState(); }
+  }
+}
+function saveState() { Save.stateDirty = true; clearTimeout(Save.stateTimer); Save.stateTimer = setTimeout(flushState, 800); }
+
+async function flushNote() {
+  clearTimeout(Save.noteTimer);
+  const job = Save.note; if (!job) return;
+  Save.note = null;
+  lsSet('rr-note-' + job.id, job.text);
+  if (Store.mode === 'local') {
+    if (!window.claude) { const p = lsGet('rr-pending-notes', []); if (!p.includes(job.id)) { p.push(job.id); lsSet('rr-pending-notes', p); } }
+    status('Saved on this phone'); return;
+  }
+  try {
+    if (Store.mode === 'server') {
+      const r = await fetch('/api/notes/' + job.id, { method: 'PUT', body: job.text, keepalive: true });
+      if (!r.ok) throw new Error('server ' + r.status);
+    } else if (job.text.trim()) {
+      await noteRef(job.id).set({ text: job.text, updatedAt: Date.now() });
+    } else {
+      await noteRef(job.id).delete();
+    }
+    if (App.current === job.id) status('Saved');
+  } catch (e) {
+    if (App.current === job.id) status('Not saved yet. Is the app still running?', true);
+    Save.note = job;
+  }
+}
+function queueNote(id, text) {
+  if (Save.note && Save.note.id !== id) flushNote();
+  Save.note = { id, text };
+  clearTimeout(Save.noteTimer); Save.noteTimer = setTimeout(flushNote, 700);
+}
+function status(t, problem) { const el = $('#note-status'); if (!el) return; el.textContent = t; el.classList.toggle('problem', !!problem); }
+
+async function loadNote(id) {
+  if (Store.mode === 'server') {
+    try { const r = await fetch('/api/notes/' + id, { cache: 'no-store' }); if (r.ok) return await r.text(); }
+    catch { /* fall through */ }
+  } else if (Store.mode === 'cloud') {
+    try { const s = await noteRef(id).get(); if (s.exists) return s.data().text || ''; return ''; }
+    catch { /* fall through */ }
+  }
+  return lsGet('rr-note-' + id, '');
+}
+
+/* ---------------- data ---------------- */
+function meta(id) { return App.index.questions[id] || App.index.pages[id] || null; }
+function isPage(id) { return !!App.index.pages[id]; }
+function marksFor(id) { return App.state.marks[id] || {}; }
+function phoneFriendly(sec) {
+  // The capstones are essays; they stay on the laptop.
+  return !(sec.kind === 'page' && /capstone/i.test(sec.section));
+}
+
+function buildOrder() {
+  App.order = []; App.sectionOf = new Map();
+  App.index.guides.forEach(g => g.sections.forEach(sec => {
+    if (!phoneFriendly(sec)) return;
+    sec.ids.forEach(id => { App.order.push(id); App.sectionOf.set(id, sec); });
+  }));
+  App.position = new Map(App.order.map((id, i) => [id, i]));
+}
+function neighbour(dir) {
+  if (!App.current) return null;
+  const i = App.position.get(App.current); if (i === undefined) return null;
+  const j = i + dir; return j < 0 || j >= App.order.length ? null : App.order[j];
+}
+function sectionProgress(sec) {
+  let known = 0, shaky = 0;
+  sec.ids.forEach(id => { const m = marksFor(id); if (m.known) known++; if (m.unsure) shaky++; });
+  return { known, shaky, total: sec.ids.length };
+}
+async function loadGuide(key) {
+  if (App.content[key]) return App.content[key];
+  const r = await fetch('data/' + key + '.json'); App.content[key] = await r.json(); return App.content[key];
+}
+function enhance(root) {
+  $$('table', root).forEach(t => {
+    if (t.parentElement.classList.contains('table-wrap')) return;
+    const w = document.createElement('div'); w.className = 'table-wrap';
+    t.parentNode.insertBefore(w, t); w.appendChild(t);
+  });
+}
+
+/* ---------------- views ---------------- */
+async function show(id, opts = {}) {
+  const info = meta(id); if (!info) return;
+  flushNote();
+  releaseCamera();
+  App.current = id; App.revealed = isPage(id);
+  App.state.last = id; saveState();
+
+  const body = (await loadGuide(info.guide))[id];
+  const sheet = $('#sheet');
+  $('#top-title').textContent = App.index.guides.find(g => g.key === info.guide).title;
+
+  if (isPage(id)) {
+    sheet.innerHTML = '<div class="crumb"><span class="sec">' + info.section_title + '</span><span class="pos">reference</span></div>'
+      + '<div class="answer is-page">' + body.answer_html + '</div>';
+  } else {
+    const sec = App.sectionOf.get(id); const here = sec.ids.indexOf(id) + 1;
+    sheet.innerHTML =
+      '<div class="crumb"><span class="qnum">' + info.qnum + '</span><span class="sec">' + info.section_title + '</span><span class="pos">' + here + ' of ' + sec.ids.length + '</span></div>'
+      + '<h1 class="question">' + info.question_html + '</h1>'
+      + '<p class="q-meta">' + info.words + ' words' + (info.is_long ? ' <span class="long">· a long one, read it rather than drill it</span>' : '') + (info.has_figure ? ' · has a diagram' : '') + '</p>'
+      + '<button class="reveal" id="reveal"><span id="reveal-label">Show the answer</span></button>'
+      + '<div class="answer-wrap" id="answer-wrap"><div><div class="answer">' + body.answer_html + '</div></div></div>';
+    $('#reveal').addEventListener('click', () => setRevealed(!App.revealed));
+    setRevealed(false);
+    mountExplainer(id);
+    sheet.appendChild($('#tpl-margin').content.cloneNode(true));
+    wireMargin(id);
+  }
+  enhance(sheet);
+  renderBottom();
+  if (!opts.keepScroll) window.scrollTo(0, 0);
+}
+function setRevealed(on) {
+  App.revealed = on;
+  const w = $('#answer-wrap'); if (!w) return;
+  w.classList.toggle('open', on);
+  $('#reveal-label').textContent = on ? 'Hide the answer' : 'Show the answer';
+}
+function renderBottom() {
+  const bar = $('#bottom'); bar.hidden = !App.current;
+  if (!App.current) return;
+  [['#nav-prev', -1], ['#nav-next', 1]].forEach(([sel, dir]) => {
+    const id = neighbour(dir); const b = $(sel); const q = $('.q', b);
+    b.disabled = !id;
+    q.textContent = id ? (isPage(id) ? meta(id).section_title : meta(id).question_text) : '—';
+    b.onclick = id ? () => show(id) : null;
+  });
+}
+
+function wireMargin(id) {
+  const marks = marksFor(id);
+  $$('.mark').forEach(b => {
+    b.classList.toggle('on', !!marks[b.dataset.mark]);
+    b.addEventListener('click', () => toggleMark(b.dataset.mark));
+  });
+  const input = $('#note'); input.value = ''; status('');
+  const token = ++Save.token; let touched = false;
+  loadNote(id).then(text => { if (token === Save.token && !touched) input.value = text; });
+  input.addEventListener('input', () => { touched = true; status('Saving…'); queueNote(id, input.value); });
+  input.addEventListener('blur', () => flushNote());
+  setupCamera(id);
+}
+function toggleMark(kind) {
+  const id = App.current; const m = { ...marksFor(id) };
+  m[kind] = !m[kind];
+  if (kind === 'known' && m.known) m.unsure = false;
+  if (kind === 'unsure' && m.unsure) m.known = false;
+  App.state.marks[id] = m; saveState();
+  $$('.mark').forEach(b => b.classList.toggle('on', !!m[b.dataset.mark]));
+}
+
+function showHome() {
+  flushNote(); releaseCamera();
+  App.current = null; renderBottom();
+  $('#top-title').textContent = 'Rehearsal Room';
+  const t = App.index.totals;
+  const shown = App.order.filter(id => !isPage(id)).length;
+  const sheet = $('#sheet');
+  sheet.innerHTML = '<h1 class="lede">Somewhere quiet to practise saying it out loud.</h1>'
+    + '<p class="sub">' + shown.toLocaleString() + ' questions from your guides, with their diagrams. Mark what you know, write what you keep forgetting, record yourself answering.</p>'
+    + '<div id="resume"></div><div id="guides"></div>';
+  const last = App.state.last && meta(App.state.last) && App.position.has(App.state.last) ? App.state.last : null;
+  if (last) {
+    const b = document.createElement('button'); b.className = 'resume';
+    b.innerHTML = '<div class="role">Where you left off</div><div class="q">' + (isPage(last) ? meta(last).section_title : meta(last).question_text) + '</div>';
+    b.addEventListener('click', () => show(last)); $('#resume').appendChild(b);
+  }
+  App.index.guides.forEach(g => {
+    const row = document.createElement('button'); row.className = 'guide-row';
+    const secs = g.sections.filter(s => s.ids.length && s.kind !== 'page');
+    const strip = secs.map(s => { const p = sectionProgress(s); return '<span class="' + (p.known === p.total ? 'done' : (p.shaky ? 'shaky' : '')) + '"></span>'; }).join('');
+    const known = secs.reduce((n, s) => n + sectionProgress(s).known, 0);
+    row.innerHTML = '<div class="t">' + g.title + '</div><div class="b">' + g.blurb + '</div><div class="strip">' + strip + '</div><div class="s">' + g.count + ' questions · ' + known + ' marked as yours</div>';
+    row.addEventListener('click', () => { const f = g.sections.find(s => s.ids.length && phoneFriendly(s)); if (f) show(f.ids[0]); });
+    $('#guides').appendChild(row);
+  });
+  window.scrollTo(0, 0);
+}
+
+/* ---------------- contents + search ---------------- */
+function renderContents() {
+  const host = $('#contents-scroll'); host.innerHTML = '';
+  const openGuide = App.current ? meta(App.current).guide : null;
+  App.index.guides.forEach(g => {
+    const head = document.createElement('button'); head.className = 'guide-head';
+    head.setAttribute('aria-expanded', String(g.key === openGuide));
+    head.innerHTML = g.title + '<span class="n">' + g.count + '</span>';
+    const body = document.createElement('div'); body.hidden = g.key !== openGuide;
+    head.addEventListener('click', () => { const o = head.getAttribute('aria-expanded') === 'true'; head.setAttribute('aria-expanded', String(!o)); body.hidden = o; });
+    host.appendChild(head); host.appendChild(body);
+    let lastPart = null;
+    g.sections.forEach(sec => {
+      if (!sec.ids.length || !phoneFriendly(sec)) return;
+      if (sec.part && sec.part !== lastPart) { const p = document.createElement('div'); p.className = 'part'; p.textContent = sec.part; body.appendChild(p); lastPart = sec.part; }
+      const pr = sectionProgress(sec);
+      const b = document.createElement('button'); b.className = 'sec-link';
+      if (sec.kind === 'page') b.classList.add('is-page');
+      if (pr.known === pr.total && sec.kind !== 'page') b.classList.add('complete');
+      if (App.current && sec.ids.includes(App.current)) b.classList.add('current');
+      b.innerHTML = '<span class="nm">' + sec.section_title + '</span>' + (sec.kind === 'page' ? '' : '<span class="dn">' + pr.known + '/' + pr.total + '</span>');
+      b.addEventListener('click', () => { $('#panel-contents').hidden = true; show(sec.ids[0]); });
+      body.appendChild(b);
+    });
+  });
+}
+function runSearch(term) {
+  const host = $('#search-results'); const q = term.trim().toLowerCase();
+  host.innerHTML = '';
+  if (q.length < 2) { host.innerHTML = '<p class="hint">Type at least two letters.</p>'; return; }
+  const hits = [];
+  for (const id of App.order) {
+    const m = meta(id); const hay = (m.question_text || m.section_title).toLowerCase();
+    const at = hay.indexOf(q); if (at !== -1) hits.push({ id, m, at });
+    if (hits.length >= 60) break;
+  }
+  if (!hits.length) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Nothing matches “' + term + '”.'; host.appendChild(p); return; }
+  hits.sort((a, b) => a.at - b.at).slice(0, 40).forEach(h => {
+    const text = h.m.question_text || h.m.section_title; const at = text.toLowerCase().indexOf(q);
+    const marked = at === -1 ? text : text.slice(0, at) + '<mark>' + text.slice(at, at + q.length) + '</mark>' + text.slice(at + q.length);
+    const b = document.createElement('button'); b.className = 'result';
+    b.innerHTML = '<div class="rq">' + marked + '</div><div class="rw">' + (h.m.qnum ? h.m.qnum + ' · ' : '') + h.m.section_title + '</div>';
+    b.addEventListener('click', () => { $('#panel-search').hidden = true; $('#search').value = ''; show(h.id); });
+    host.appendChild(b);
+  });
+}
+
+/* ---------------- camera (needs the assets capability) ---------------- */
+const Camera = { stream: null, recorder: null, chunks: [], started: 0, timer: null, limit: 120, audio: null };
+function releaseCamera() {
+  if (Camera.stream) { Camera.stream.getTracks().forEach(t => t.stop()); Camera.stream = null; }
+  clearInterval(Camera.timer);
+  const st = $('#stage'); if (st) st.classList.remove('live');
+}
+function fmtBytes(n) { return n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+function setupCamera(id) {
+  const block = $('#camera-block');
+  const canStore = Store.mode === 'server' || !!Store.assets;
+  if (!navigator.mediaDevices || !window.MediaRecorder) { block.hidden = true; return; }
+  if (!canStore) {
+    if (window.claude) { block.hidden = true; return; }
+    block.hidden = false; $('#record').hidden = true; $('#takes').innerHTML = ''; $('#camera-note').textContent = '';
+    $('#stage-empty').textContent = 'Recording needs the server, which is off. Open the Termux app to start it.';
+    return;
+  }
+  block.hidden = false; $('#record').hidden = false;
+  $('#stage-empty').textContent = 'Record yourself answering, then watch it back. Up to '
+    + (Store.mode === 'server' ? '10 minutes' : '2 minutes') + ' a take.';
+  $('#record').addEventListener('click', () => {
+    if (Camera.recorder && Camera.recorder.state === 'recording') stopRecording(); else startRecording(id);
+  });
+  renderTakes(id);
+}
+async function startRecording(id) {
+  const note = $('#camera-note'); note.classList.remove('problem'); note.textContent = 'Asking for the camera…';
+  try {
+    Camera.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, audio: true });
+  } catch (e) {
+    note.classList.add('problem');
+    note.textContent = e.name === 'NotAllowedError' ? 'Camera blocked. Allow it in your browser settings, then try again.' : 'No camera available: ' + e.name;
+    return;
+  }
+  const stage = $('#stage'); const v = $('#preview');
+  v.controls = false; v.muted = true; v.srcObject = Camera.stream; v.play(); stage.classList.add('live'); stage.classList.remove('playing');
+  const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  Camera.chunks = [];
+  // A small Opus file beside the video, for transcription. The video at
+  // 900 kbps passes the 25 MB cap after about three and a half minutes.
+  Camera.audio = window.RehearsalAI ? RehearsalAI.recordAudio(Camera.stream) : null;
+  Camera.recorder = new MediaRecorder(Camera.stream, { mimeType: mime, videoBitsPerSecond: 900000, audioBitsPerSecond: 64000 });
+  Camera.recorder.ondataavailable = e => { if (e.data.size) Camera.chunks.push(e.data); };
+  Camera.recorder.onstop = () => uploadTake(id, mime);
+  Camera.recorder.start();
+  Camera.started = Date.now();
+  $('#rec-dot').hidden = false; $('#rec-time').hidden = false;
+  Camera.timer = setInterval(() => {
+    const s = Math.floor((Date.now() - Camera.started) / 1000);
+    $('#rec-time').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    if (s >= Camera.limit) stopRecording();
+  }, 250);
+  $('#record').classList.add('recording'); $('#record-label').textContent = 'Stop and save';
+  note.textContent = 'Recording. Say it the way you would in the room.';
+}
+function stopRecording() {
+  if (Camera.recorder && Camera.recorder.state === 'recording') Camera.recorder.stop();
+  $('#record').classList.remove('recording'); $('#record-label').textContent = 'Start recording';
+  $('#rec-dot').hidden = true; $('#rec-time').hidden = true; clearInterval(Camera.timer);
+}
+async function uploadTake(id, mime) {
+  const type = mime.startsWith('video/mp4') ? 'video/mp4' : 'video/webm';
+  const blob = new Blob(Camera.chunks, { type });
+  Camera.chunks = [];
+  // Same stamp for video and audio -- that is what pairs them on disk.
+  const stamp = Date.now();
+  let audio = Camera.audio ? await Camera.audio.stop() : null;
+  Camera.audio = null;
+  releaseCamera();
+  const note = $('#camera-note'); const say = t => { if (App.current === id && note) note.textContent = t; };
+  say('Saving ' + fmtBytes(blob.size) + '…');
+  try {
+    if (Store.mode === 'server') {
+      const r = await fetch('/api/recordings/' + id, { method: 'POST', headers: { 'Content-Type': type, 'X-Recorded-At': String(stamp) }, body: blob });
+      if (!r.ok) throw new Error('server ' + r.status);
+      const saved = await r.json();
+      if (window.RehearsalAI && RehearsalAI.enabled) {
+        if (!audio) audio = await RehearsalAI.wavFromVideo(blob);
+        await RehearsalAI.uploadAudio(id, stamp, audio);
+      }
+      App.takes[id] = (App.takes[id] || []).concat([{ name: saved.name, at: Date.now(), bytes: saved.bytes }]);
+      say('Saved ' + fmtBytes(saved.bytes) + ' into the RehearsalRoom folder.');
+    } else {
+      const up = await Store.assets.upload(blob, { type });
+      App.takes[id] = (App.takes[id] || []).concat([{ asset: up.id, at: Date.now(), bytes: up.sizeBytes }]);
+      await takesRef().set({ byQuestion: App.takes, updatedAt: Date.now() });
+      say('Saved ' + fmtBytes(up.sizeBytes) + ' to your account.');
+    }
+    if (App.current === id) renderTakes(id);
+  } catch (e) {
+    note.classList.add('problem');
+    say(e && e.code === 'too_large' ? 'That take is over the 20 MB limit. Try a shorter one.' : 'Could not save the recording (' + ((e && e.code) || 'error') + ').');
+  }
+}
+function renderTakes(id) {
+  const host = $('#takes'); if (!host) return; host.innerHTML = '';
+  (App.takes[id] || []).forEach(t => {
+    const when = new Date(t.at);
+    const li = document.createElement('li'); li.className = 'take';
+    li.innerHTML = '<span class="name">' + when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</span><span class="size">' + fmtBytes(t.bytes) + '</span>';
+    const play = document.createElement('button'); play.innerHTML = '<svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z"/></svg>';
+    play.addEventListener('click', () => { releaseCamera(); const v = $('#preview'); v.srcObject = null; v.src = t.asset ? '/_blob/' + t.asset : 'recordings/' + t.name; v.muted = false; v.controls = true; $('#stage').classList.add('playing'); v.play(); });
+    const del = document.createElement('button'); del.className = 'del'; del.innerHTML = '<svg viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2M6.5 6l.7 10h5.6l.7-10"/></svg>';
+    let armed = false;
+    del.addEventListener('click', async () => {
+      if (!armed) { armed = true; del.innerHTML = '<span style="font-size:11px">Sure?</span>'; setTimeout(() => { armed = false; del.innerHTML = '<svg viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2M6.5 6l.7 10h5.6l.7-10"/></svg>'; }, 3000); return; }
+      try {
+        if (Store.mode === 'server') {
+          const r = await fetch('/api/recordings/' + t.name, { method: 'DELETE' });
+          if (!r.ok) throw new Error('server ' + r.status);
+          App.takes[id] = (App.takes[id] || []).filter(x => x.name !== t.name);
+        } else {
+          await Store.assets.delete(t.asset);
+          App.takes[id] = (App.takes[id] || []).filter(x => x.asset !== t.asset);
+          await takesRef().set({ byQuestion: App.takes, updatedAt: Date.now() });
+        }
+        renderTakes(id); toast('Take deleted');
+      } catch { toast('Could not delete that take'); }
+    });
+    li.appendChild(play); li.appendChild(del); host.appendChild(li);
+    // Grading needs the local server (it holds the key and the files), so
+    // it appears only in server mode -- never on the account store.
+    if (window.RehearsalAI && RehearsalAI.enabled && Store.mode === 'server' && t.name) {
+      const row = document.createElement('li');
+      row.className = 'ai-take-row';
+      host.appendChild(row);
+      RehearsalAI.mountTake(row, {
+        base: t.name.replace(/\.(webm|mp4)$/, ''),
+        questionId: id,
+        onGraded: (grade, transcript) => { t.transcript = transcript; },
+      });
+    }
+  });
+}
+
+/* The concept explainer goes after the answer and INSIDE the collapsing
+   wrapper, so it appears when you reveal the answer and stays hidden
+   while you are still trying to recall it -- asking about a concept
+   before seeing the answer would spoil the drill. */
+function mountExplainer(id) {
+  if (!window.RehearsalAI || !RehearsalAI.enabled || !id) return;
+  const wrap = $('#answer-wrap');
+  const host = wrap ? wrap.firstElementChild : $('.answer.is-page');
+  if (!host) return;
+  const old = host.querySelector('.ai-ask');
+  if (old) old.remove();
+  RehearsalAI.mountExplain(host, { questionId: id });
+}
+
+/* ---------------- wiring ---------------- */
+function setType(px) { const s = Math.min(24, Math.max(15, px)); document.documentElement.style.setProperty('--read', s + 'px'); lsSet('rr-size', s); }
+function wire() {
+  $('#btn-contents').addEventListener('click', () => { renderContents(); $('#panel-contents').hidden = false; });
+  $('#close-contents').addEventListener('click', () => { $('#panel-contents').hidden = true; });
+  $('#btn-search').addEventListener('click', () => { $('#panel-search').hidden = false; setTimeout(() => $('#search').focus(), 50); });
+  $('#close-search').addEventListener('click', () => { $('#panel-search').hidden = true; });
+  $('#search').addEventListener('input', e => runSearch(e.target.value));
+  $('#nav-home').addEventListener('click', showHome);
+  $('#type-up').addEventListener('click', () => setType(parseInt(getComputedStyle(document.documentElement).getPropertyValue('--read'), 10) + 1));
+  $('#type-down').addEventListener('click', () => setType(parseInt(getComputedStyle(document.documentElement).getPropertyValue('--read'), 10) - 1));
+
+  // swipe between questions
+  let x0 = null, y0 = null;
+  document.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (x0 === null || !App.current) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > 60 || e.target.closest('.table-wrap, textarea, input')) return;
+    const id = neighbour(dx < 0 ? 1 : -1); if (id) show(id);
+  }, { passive: true });
+
+  window.addEventListener('pagehide', () => { flushNote(); flushState(); releaseCamera(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { flushNote(); flushState(); } });
+}
+
+async function start() {
+  setType(lsGet('rr-size', 18));
+  try {
+    App.index = await (await fetch('data/index.json')).json();
+  } catch {
+    $('#sheet').innerHTML = '<p class="hint">Could not load the question data. Reload the page.</p>'; return;
+  }
+  buildOrder(); wire();
+  $('#sync').addEventListener('click', openTermux);
+  // Render at once from local data; the account store lights up when it answers.
+  App.state = lsGet('rr-state', { marks: {}, last: null });
+  // Is grading available? Local call, so it answers at once -- but the
+  // boot must not hang on it if the server is gone.
+  if (window.RehearsalAI) {
+    try {
+      await Promise.race([RehearsalAI.ready,
+                          new Promise(r => setTimeout(r, 1500))]);
+    } catch (e) { /* grading simply stays off */ }
+  }
+  showHome();
+  connectStore();
+}
+start();
+})();
+</script>

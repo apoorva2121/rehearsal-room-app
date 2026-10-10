@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rehearsal Room</title>
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="icon-button" id="toggle-contents" aria-label="Show or hide contents" title="Contents (C)">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h9"/></svg>
+  </button>
+
+  <a class="wordmark" href="#" id="go-home">Rehearsal Room</a>
+
+  <div class="search-field">
+    <svg viewBox="0 0 20 20" aria-hidden="true" class="search-icon"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+    <input type="search" id="search" placeholder="Search 1,204 questions" autocomplete="off" spellcheck="false">
+    <kbd class="search-hint">/</kbd>
+  </div>
+
+  <div class="topbar-tools">
+    <div class="type-size" role="group" aria-label="Text size">
+      <button class="icon-button" id="type-down" title="Smaller text">A<span class="small-a">a</span></button>
+      <button class="icon-button" id="type-up" title="Larger text">A<span class="big-a">a</span></button>
+    </div>
+    <button class="icon-button" id="open-recordings" title="Your recordings">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="5.5" width="10" height="9" rx="2"/><path d="M12.5 10l5-3v6l-5-3z"/></svg>
+    </button>
+    <button class="icon-button" id="toggle-theme" title="Light or dark">
+      <svg viewBox="0 0 20 20" aria-hidden="true" class="sun"><circle cx="10" cy="10" r="4"/><path d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2M16 4l-1.4 1.4M5.4 14.6L4 16M16 16l-1.4-1.4M5.4 5.4L4 4"/></svg>
+      <svg viewBox="0 0 20 20" aria-hidden="true" class="moon"><path d="M16 12.3A7 7 0 017.7 4 7 7 0 1016 12.3z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- Left rail: what there is to study -->
+  <nav class="contents" id="contents" aria-label="Contents">
+    <div class="contents-scroll" id="contents-scroll"></div>
+    <div class="contents-foot" id="contents-foot"></div>
+  </nav>
+
+  <!-- Centre: the reading column -->
+  <main class="reading" id="reading" tabindex="-1">
+    <div class="sheet" id="sheet"></div>
+  </main>
+
+  <!-- Right rail: what you add -->
+  <aside class="margin" id="margin" aria-label="Your notes and recordings">
+    <div class="margin-inner" id="margin-inner"></div>
+  </aside>
+
+</div>
+
+<div class="search-results" id="search-results" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<template id="tpl-margin">
+  <section class="margin-block marks">
+    <div class="mark-row">
+      <button class="mark" data-mark="known">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>
+        <span>Got it</span>
+      </button>
+      <button class="mark" data-mark="unsure">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 7.5a2.5 2.5 0 114 2c-.9.7-1.5 1.2-1.5 2.5"/><circle cx="10" cy="15.2" r=".9" fill="currentColor" stroke="none"/></svg>
+        <span>Shaky</span>
+      </button>
+      <button class="mark" data-mark="starred">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7z"/></svg>
+        <span>Save</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="margin-block notes">
+    <h2 class="margin-title">Your notes</h2>
+    <textarea id="note-input" placeholder="What you'd actually say. What you keep forgetting." spellcheck="true"></textarea>
+    <p class="note-status" id="note-status"></p>
+  </section>
+
+  <section class="margin-block camera">
+    <h2 class="margin-title">Say it out loud</h2>
+    <div class="stage" id="camera-stage">
+      <video id="preview" playsinline muted></video>
+      <div class="stage-empty" id="stage-empty">
+        <p>Record yourself answering, then watch it back.</p>
+      </div>
+      <div class="rec-dot" id="rec-dot" hidden></div>
+      <div class="rec-time" id="rec-time" hidden>0:00</div>
+    </div>
+    <div class="camera-controls">
+      <button class="record-button" id="record-button">
+        <span class="record-glyph"></span>
+        <span id="record-label">Start recording</span>
+      </button>
+    </div>
+    <p class="camera-note" id="camera-note"></p>
+    <ul class="takes" id="takes"></ul>
+  </section>
+</template>
+
+<script src="assets/ai-client.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

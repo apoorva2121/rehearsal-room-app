@@ -1,0 +1,43 @@
+# --- credentials ---
+.env
+.env.*
+*.pem
+*.key
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- your recordings: webcam video of you answering, ~10 MB per minute ---
+# Excluded on size alone, and because video of your face does not belong in a
+# git history even a private one. Back these up to a drive instead.
+recordings/
+
+# --- os / editor noise ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# --- generated study content: NOT published ---
+# data/ and figures/ are built by build.py from the guides in SOURCE_ROOT. They
+# are my interview guides (1,736 questions, 185 diagrams) and are deliberately
+# not public. Anyone forking this points REHEARSAL_SOURCE at their own material
+# and runs build.py to generate their own.
+data/
+figures/
+
+# Your source guides, however you supply them - including a junction/symlink
+# named `guides` pointing at a folder elsewhere.
+guides/
+
+# Local study state and your own writing.
+notes/
+state.json
+
+# Stale duplicates of guide sections that the app does not read.
+/[0-9][0-9]-*.md
+/[0-9][0-9]-*.docx
